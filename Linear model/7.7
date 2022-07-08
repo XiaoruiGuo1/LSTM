@@ -1,0 +1,19 @@
+import sys
+import os
+import math
+import numpy as np
+from matplotlib import pyplot as plt
+
+k = np.arange(-200,200,dtype=float)
+u = np.sin(k)
+def x(k):
+    x[(k+1)]=0.9*x[(k)]+2*u
+    return x
+y = x(k)
+def u_plot (x_axis,y_axis,x_label,y_label):
+    plt.figure(figsize = (11, 6))
+    plt.plot(x_axis, y_axis, color ='black')
+    plt.xlabel(x_label, {'fontsize': 12}) 
+    plt.ylabel(y_label, {'fontsize': 12})
+u_plot (k,u,'k','u')
+plt.show()
