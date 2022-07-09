@@ -3,17 +3,28 @@ import os
 import math
 import numpy as np
 from matplotlib import pyplot as plt
+from sklearn.model_selection import train_test_split
 
-k = np.arange(-200,200,dtype=float)
-u = np.sin(k)
-def x(k):
-    x[(k+1)]=0.9*x[(k)]+2*u
-    return x
-y = x(k)
+u = np.zeros(180)
+x = np.zeros(180)
+k = np.arange(0,180)
+x[0] = 0
+i = 0
+for i in range (0,179):
+       u[i] = np.sin(i) 
+       x[i + 1] = 0.9*x[i] + 2*u[i]
+       i = i + 1
 def u_plot (x_axis,y_axis,x_label,y_label):
     plt.figure(figsize = (11, 6))
     plt.plot(x_axis, y_axis, color ='black')
     plt.xlabel(x_label, {'fontsize': 12}) 
     plt.ylabel(y_label, {'fontsize': 12})
 u_plot (k,u,'k','u')
+u_plot (k,x,'k','x')
 plt.show()
+
+y = x.reshape(36,5)
+u = u.reshape(36,5)
+
+u_train, u_test, y_train, y_test = train_test_split(
+    u, y,test_size=16, random_state=4)
