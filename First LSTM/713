@@ -28,3 +28,5 @@ u = u.reshape(36,5)
 
 u_train, u_test, y_train, y_test = train_test_split(
     u, y,test_size=16, random_state=4)
+
+#Start to train the data#
