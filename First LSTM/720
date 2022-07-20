@@ -27,45 +27,53 @@ u_plot (k,u,'k','u')
 u_plot (k,x,'k','x')
 plt.show()
 
-y = x.reshape(36,5)
-u = u.reshape(36,5)
+y = x.reshape(180,1)
+u = u.reshape(180,1)
 
-u_train, u_test, y_train, y_test = train_test_split(
-    u, y,test_size=16, random_state=4)
 
+train_ind = int(180/1.8)
+y_train = y[:train_ind]
+y_test = y[train_ind:]
+u_train = u[:train_ind]
+u_test = u[train_ind:]
 
 train_series = y_train.reshape(100, 1)
 test_series = y_test.reshape(80,1)
 u_train.reshape(100,1)
 u_test.reshape(80,1)
+
 from keras.preprocessing.sequence import TimeseriesGenerator
-train_generator = TimeseriesGenerator(train_series, train_series,
-                                      length   = 20,
-                                      sampling_rate= 1,
-                                      stride = 1,
-                                      batch_size = 10            )
-test_generator = TimeseriesGenerator(test_series, test_series,
-                                      length   = 20,
-                                      sampling_rate= 1,
-                                      stride = 1,
-                                      batch_size = 10            )
+train_generator = TimeseriesGenerator(
+    u_train, train_series,
+    length = 4,
+    sampling_rate = 1,
+    stride = 1,
+    batch_size = 1)
+test_generator = TimeseriesGenerator(
+    u_test, test_series,
+    length   = 4,
+    sampling_rate= 1,
+    stride = 1, 
+    batch_size = 1)
 
 from keras.models import Sequential
 from keras.layers import Dense
 from keras.layers import LSTM
 
 model = Sequential()
-model.add(LSTM(4, input_shape=(20,1)))
+model.add(LSTM(8))
 model.add(Dense(1))
 model.compile(optimizer='adam', loss='mse')
 model.fit(train_generator,epochs=300, verbose=0)
 
 test_predictions = model.predict(test_generator)
-
-x = np.arange(0,60)
+print(test_predictions.shape)
+z = np.arange(100,176)
+g = np.arange(100,180)
+h = np.arange(0,100)
 fig, ax = plt.subplots(1, 1, figsize=(15, 5))
-ax.plot(u_train,y_train, lw=2, label='train data')
-ax.plot(u_test,y_test, lw=3, c='y', label='test data')
-ax.plot(x,test_predictions, lw=3, c='r',linestyle = ':', label='predictions')
+ax.plot(h,y_train, lw=2, label='train data')
+ax.plot(g,y_test, lw=3, c='y', label='test data')
+ax.plot(z,test_predictions, lw=4, c='r',linestyle = ':', label='predictions')
 ax.legend(loc="lower left")
 plt.show();
