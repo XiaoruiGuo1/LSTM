@@ -37,13 +37,13 @@ u_test = u[train_ind:]
 
 from keras.preprocessing.sequence import TimeseriesGenerator
 train_generator = TimeseriesGenerator(
-    u_train, y_train,
+    y_train, y_train,
     length = 4,
     sampling_rate = 1,
     stride = 1,
     batch_size = 1)
 test_generator = TimeseriesGenerator(
-    u_test, y_test,
+    y_test, y_test,
     length   = 4,
     sampling_rate= 1,
     stride = 1, 
@@ -63,7 +63,7 @@ test_predictions = model.predict(test_generator)
 print(test_predictions.shape)
 
 
-z = np.arange(101,177)
+z = np.arange(105,181)
 g = np.arange(101,181)
 h = np.arange(0,100)
 fig, ax = plt.subplots(1, 1, figsize=(15, 5))
