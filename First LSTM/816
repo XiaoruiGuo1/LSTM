@@ -5,6 +5,8 @@ import numpy as np
 import tensorflow as tf
 from matplotlib import pyplot as plt
 
+
+# Create the dataset
 u = np.zeros(1800)
 x = np.zeros(1801)
 q = np.arange(0,1800)
@@ -17,6 +19,8 @@ for i in range(1800):
 print(f"Shape of x:{x.shape}")
 print(f"shape of u:{u.shape}")
 
+
+# Visualize the dataset
 def u_plot (x_axis,y_axis,x_label,y_label):
     plt.figure(figsize = (20, 6))
     plt.plot(x_axis, y_axis, color ='black')
@@ -25,7 +29,7 @@ def u_plot (x_axis,y_axis,x_label,y_label):
 u_plot (q,u,'k','u')
 u_plot (k,x,'k','x')
 plt.show()
-
+# Create the time series sequences
 def time_series_sequence(input_dataset, output_dataset, input_length, output_length): 
     U, y = list(), list()
     for i in range(len(output_dataset)):
@@ -38,7 +42,7 @@ def time_series_sequence(input_dataset, output_dataset, input_length, output_len
         y.append(seq_y)
     return np.array(U), np.array(y)
         
-
+# Split the dataset into train and test
 y = x.reshape(1801,1)
 u = u.reshape(1800,1)
 train_ind = 1000
@@ -49,12 +53,13 @@ u_test = u[train_ind:]
 print(u_train.shape)
 print(u_test.shape)
 
+# Create the 3D train, test dataset to feed into LSTM layer.
 input_length = 20 
 output_length = 5
 U_train, Y_train = time_series_sequence(u_train, y_train, input_length, output_length)
 U_test, Y_test = time_series_sequence(u_test, y_test, input_length, output_length)
 
-
+# Build the LSTM encoder-decoder model
 from keras.models import Sequential
 from keras.layers import Dense, LSTM, Dropout, RepeatVector, TimeDistributed
 from keras.callbacks import ModelCheckpoint
@@ -69,6 +74,7 @@ model = encoder_decoder_model()
 model.summary()
 model.compile(optimizer='adam', loss='mean_squared_error',metrics=['accuracy'])
 
+# Train and test
 Train = model.fit(U_train, Y_train, epochs=50)
 Y_predict = model.predict(U_test)
 Y_pred = np.squeeze(Y_predict, axis=2)
@@ -76,8 +82,7 @@ Y_pred = Y_pred.flatten()
 Y_test = np.squeeze(Y_test,axis=2)
 Y_test = Y_test.flatten()
 
-
-
+# Visualize the results
 fig, ax = plt.subplots(1, 1, figsize=(15, 8))
 ax.plot(Y_test, lw=3, c='y', label='test data')
 ax.plot(Y_pred, lw=4, c='r',linestyle = ':', label='predictions')
