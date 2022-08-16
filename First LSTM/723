@@ -5,20 +5,20 @@ import numpy as np
 import tensorflow as tf
 from matplotlib import pyplot as plt
 
-u = np.zeros(180)
-x = np.zeros(181)
-q = np.arange(0,180)
-k = np.arange(0,181)
+u = np.zeros(1800)
+x = np.zeros(1801)
+q = np.arange(0,1800)
+k = np.arange(0,1801)
 x[0] = 0
 i = 0
-for i in range (0,179):
-       u[i] = np.sin(i*np.pi/20) 
-       x[i + 1] = 0.9*x[i] + 2*u[i]
+for i in range(1800):
+       u[i] = np.sin(i*np.pi/20) + np.random.normal(0,0.2) #Add the noise
+       x[i + 1] = 0.9*x[i] + 2*u[i] + np.random.normal(0,0.2)
 print(f"Shape of x:{x.shape}")
 print(f"shape of u:{u.shape}")
 
 def u_plot (x_axis,y_axis,x_label,y_label):
-    plt.figure(figsize = (11, 6))
+    plt.figure(figsize = (20, 6))
     plt.plot(x_axis, y_axis, color ='black')
     plt.xlabel(x_label, {'fontsize': 12}) 
     plt.ylabel(y_label, {'fontsize': 12})
@@ -26,48 +26,60 @@ u_plot (q,u,'k','u')
 u_plot (k,x,'k','x')
 plt.show()
 
-y = x.reshape(181,1)
-u = u.reshape(180,1)
-train_ind = int(180/1.8)
+def time_series_sequence(input_dataset, output_dataset, input_length, output_length): 
+    U, y = list(), list()
+    for i in range(len(output_dataset)):
+        end_iu = i + input_length
+        end_oy = end_iu + output_length
+        if end_oy > len(output_dataset):
+            break
+        seq_U, seq_y = input_dataset[i:end_iu].tolist(), output_dataset[end_iu:end_oy].tolist()
+        U.append(seq_U)
+        y.append(seq_y)
+    return np.array(U), np.array(y)
+        
+
+y = x.reshape(1801,1)
+u = u.reshape(1800,1)
+train_ind = 1000
 y_train = y[1:train_ind+1]
 y_test = y[train_ind+1:]
 u_train = u[:train_ind]
 u_test = u[train_ind:]
+print(u_train.shape)
+print(u_test.shape)
 
-from keras.preprocessing.sequence import TimeseriesGenerator
-train_generator = TimeseriesGenerator(
-    y_train, y_train,
-    length = 4,
-    sampling_rate = 1,
-    stride = 1,
-    batch_size = 1)
-test_generator = TimeseriesGenerator(
-    y_test, y_test,
-    length   = 4,
-    sampling_rate= 1,
-    stride = 1, 
-    batch_size = 1)
+input_length = 20 
+output_length = 5
+U_train, Y_train = time_series_sequence(u_train, y_train, input_length, output_length)
+U_test, Y_test = time_series_sequence(u_test, y_test, input_length, output_length)
+
 
 from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import LSTM
+from keras.layers import Dense, LSTM, Dropout, RepeatVector, TimeDistributed
+from keras.callbacks import ModelCheckpoint
+def encoder_decoder_model():
+    model = Sequential()
+    model.add(LSTM(100, activation='sigmoid',input_shape=(20,1)))
+    model.add(RepeatVector(5)) #From 2D to 3D.
+    model.add(LSTM(100,activation='sigmoid',return_sequences=True))
+    model.add(TimeDistributed(Dense(units=1,activation = "linear")))
+    return model
+model = encoder_decoder_model()
+model.summary()
+model.compile(optimizer='adam', loss='mean_squared_error',metrics=['accuracy'])
 
-model = Sequential()
-model.add(LSTM(4))
-model.add(Dense(1))
-model.compile(optimizer='adam', loss='mse')
-model.fit(train_generator,epochs=300)
-
-test_predictions = model.predict(test_generator)
-print(test_predictions.shape)
+Train = model.fit(U_train, Y_train, epochs=50)
+Y_predict = model.predict(U_test)
+Y_pred = np.squeeze(Y_predict, axis=2)
+Y_pred = Y_pred.flatten()
+Y_test = np.squeeze(Y_test,axis=2)
+Y_test = Y_test.flatten()
 
 
-z = np.arange(105,181)
-g = np.arange(101,181)
-h = np.arange(0,100)
-fig, ax = plt.subplots(1, 1, figsize=(15, 5))
-ax.plot(h,y_train, lw=2, label='train data')
-ax.plot(g,y_test, lw=3, c='y', label='test data')
-ax.plot(z,test_predictions, lw=4, c='r',linestyle = ':', label='predictions')
+
+fig, ax = plt.subplots(1, 1, figsize=(15, 8))
+ax.plot(Y_test, lw=3, c='y', label='test data')
+ax.plot(Y_pred, lw=4, c='r',linestyle = ':', label='predictions')
 ax.legend(loc="lower left")
 plt.show();
