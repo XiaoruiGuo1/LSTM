@@ -22,13 +22,15 @@ print(f"shape of u:{u.shape}")
 
 # Visualize the dataset
 def u_plot (x_axis,y_axis,x_label,y_label):
-    plt.figure(figsize = (20, 6))
+    plt.figure(figsize = (18, 6))
     plt.plot(x_axis, y_axis, color ='black')
     plt.xlabel(x_label, {'fontsize': 12}) 
     plt.ylabel(y_label, {'fontsize': 12})
 u_plot (q,u,'k','u')
 u_plot (k,x,'k','x')
 plt.show()
+
+
 # Create the time series sequences
 def time_series_sequence(input_dataset, output_dataset, input_length, output_length): 
     U, y = list(), list()
@@ -41,7 +43,8 @@ def time_series_sequence(input_dataset, output_dataset, input_length, output_len
         U.append(seq_U)
         y.append(seq_y)
     return np.array(U), np.array(y)
-        
+
+
 # Split the dataset into train and test
 y = x.reshape(1801,1)
 u = u.reshape(1800,1)
@@ -50,14 +53,22 @@ y_train = y[1:train_ind+1]
 y_test = y[train_ind+1:]
 u_train = u[:train_ind]
 u_test = u[train_ind:]
-print(u_train.shape)
-print(u_test.shape)
+print(f"Shape of y_train:{y_train.shape}")
+print(f"shape of y_test:{y_test.shape}")
+print(f"Shape of u_train:{u_train.shape}")
+print(f"shape of u_test:{u_test.shape}")
+
 
 # Create the 3D train, test dataset to feed into LSTM layer.
 input_length = 20 
 output_length = 5
 U_train, Y_train = time_series_sequence(u_train, y_train, input_length, output_length)
 U_test, Y_test = time_series_sequence(u_test, y_test, input_length, output_length)
+print(f"Shape of U_train:{U_train.shape}")
+print(f"shape of U_test:{U_test.shape}")
+print(f"Shape of Y_train:{Y_train.shape}")
+print(f"shape of Y_test:{Y_test.shape}")
+
 
 # Build the LSTM encoder-decoder model
 from keras.models import Sequential
@@ -72,7 +83,8 @@ def encoder_decoder_model():
     return model
 model = encoder_decoder_model()
 model.summary()
-model.compile(optimizer='adam', loss='mean_squared_error',metrics=['accuracy'])
+model.compile(optimizer='adam', loss='mean_squared_error')
+
 
 # Train and test
 Train = model.fit(U_train, Y_train, epochs=50)
@@ -81,6 +93,7 @@ Y_pred = np.squeeze(Y_predict, axis=2)
 Y_pred = Y_pred.flatten()
 Y_test = np.squeeze(Y_test,axis=2)
 Y_test = Y_test.flatten()
+
 
 # Visualize the results
 fig, ax = plt.subplots(1, 1, figsize=(15, 8))
