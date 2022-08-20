@@ -3,34 +3,84 @@ import os
 import math
 import numpy as np
 import tensorflow as tf
+from tensorflow import keras
 from matplotlib import pyplot as plt
 
 
-# Create the dataset
+# Create the dataset of subsystems
 u = np.zeros(1800)
-x = np.zeros(1801)
-q = np.arange(0,1800)
-k = np.arange(0,1801)
-x[0] = 0
+x_1 = np.zeros(1801)
+x_2 = np.zeros(1801)
+x_3 = np.zeros(1801)
+x_4 = np.zeros(1801)
+x_5 = np.zeros(1801)
+x_6 = np.zeros(1801)
+x_7 = np.zeros(1801)
+x_8 = np.zeros(1801)
+x_9 = np.zeros(1801)
+x_10 = np.zeros(1801)
+x_11 = np.zeros(1801)
+x_12 = np.zeros(1801)
+x_13 = np.zeros(1801)
+x_14 = np.zeros(1801)
+x_15 = np.zeros(1801)
+x_16 = np.zeros(1801)
+x_17 = np.zeros(1801)
+x_18 = np.zeros(1801)
+x_19 = np.zeros(1801)
+x_20 = np.zeros(1801)
+
 i = 0
 for i in range(1800):
-       u[i] = np.sin(i*np.pi/20) + np.random.normal(0,0.2) #Add the noise
-       x[i + 1] = 0.9*x[i] + 2*u[i] + np.random.normal(0,0.2)
-print(f"Shape of x:{x.shape}")
-print(f"shape of u:{u.shape}")
-
+       u[i] = np.sin(i*np.pi/20) 
+       x_1[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_2[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_3[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_4[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_5[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_6[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_7[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_8[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_9[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_10[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_11[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_12[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_13[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_14[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_15[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_16[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_17[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_18[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_19[i + 1] = 0.9*x_1[i] + 2*u[i]
+       x_20[i + 1] = 0.9*x_1[i] + 2*u[i]
+print(f"Shape of x_15:{x_15.shape}")
 
 # Visualize the dataset
+h = np.arange(0,1801)
 def u_plot (x_axis,y_axis,x_label,y_label):
     plt.figure(figsize = (18, 6))
     plt.plot(x_axis, y_axis, color ='black')
     plt.xlabel(x_label, {'fontsize': 12}) 
     plt.ylabel(y_label, {'fontsize': 12})
-u_plot (q,u,'k','u')
-u_plot (k,x,'k','x')
+u_plot (h,x_1,'h','x_1')
 plt.show()
 
+arrays_list = [x_3,x_4,x_5,x_6,x_7,x_8,x_9,x_10,
+               x_11,x_12,x_13,x_14,x_15,x_16,x_17,x_18,x_19,x_20]
 
+x_1 = x_1.reshape(1801,1)
+x_2 = x_2.reshape(1801,1)
+
+combined_x = np.concatenate((x_1,x_2),axis=1)
+
+for _ in arrays_list:
+    _=_.reshape(1801,1)
+    combined_x = np.concatenate((combined_x, _),axis=1)
+print(f"Shape of combined_x: {combined_x.shape}")
+
+
+
+'''
 # Create the time series sequences
 def time_series_sequence(input_dataset, output_dataset, input_length, output_length): 
     U, y = list(), list()
@@ -101,3 +151,4 @@ ax.plot(Y_test, lw=3, c='y', label='test data')
 ax.plot(Y_pred, lw=4, c='r',linestyle = ':', label='predictions')
 ax.legend(loc="lower left")
 plt.show();
+'''
