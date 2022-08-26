@@ -1,6 +1,7 @@
 import sys
 import os
 import math
+from unicodedata import name
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
@@ -131,41 +132,47 @@ Y_test_2 = Y_test_list[1]
 combined_Y_test = np.dstack((Y_test_1,Y_test_2))
 for i in range(2,20):
     combined_Y_test = np.dstack((combined_Y_test,Y_test_list[i]))
-print(f"shape of combined_Y_test:{combined_Y_test.shape}")
+print(f"Shape of combined_Y_test:{combined_Y_test.shape}")
 # Now, we have U_train, combined_Y_train, U_test, combined_Y_test
 # U_train shape is (976,20,1), combined_Y_train shape is (976,5,20).
 # 20 is features, means we have 20 different(now are same) outputs. 
 
 
 # Build feedforward layer and the LSTM encoder-decoder model
-from keras import Input
+from keras import Input,losses
+from keras.losses import Loss
 from keras.models import Sequential
 from keras.layers import Dense, LSTM, Dropout, RepeatVector, TimeDistributed
 from keras.callbacks import ModelCheckpoint
-def feedforward_layer():
+def Reduce_Dimensions_model():
     model = Sequential()
-    model.add(Input(20,))
+    model.add(Input(shape=(5,20)))
     model.add(Dense(15,activation='linear'))
     model.add(Dense(5,activation='linear'))
-    return model
-model_ffl= feedforward_layer()
-model_ffl.summary()
-model_ffl.compile(optimizer='adam', loss='mean_squared_error')
-
-
-'''
-    model.add(LSTM(100, activation='sigmoid',input_shape=(20,1)))
-    model.add(RepeatVector(5)) #From 2D to 3D.
+    model.add(Dense(1,activation='linear',name="ffloutput"))
+    #LSTM encoder_decoder    
+    model.add(LSTM(100, activation='sigmoid'))
+    model.add(RepeatVector(5))
     model.add(LSTM(100,activation='sigmoid',return_sequences=True))
-    model.add(TimeDistributed(Dense(units=1,activation = "linear")))
+    model.add(TimeDistributed(Dense(units=1,activation = "linear"),name="finaloutput"))
     return model
-model = encoder_decoder_model()
+model = Reduce_Dimensions_model()
 model.summary()
-model.compile(optimizer='adam', loss='mean_squared_error')
+ffl_output = model.get_layer("ffloutput").output
+final_output = model.get_layer("finaloutput").output
+print(f"Shape of ffl_output:{ffl_output.shape}")
+print(f"shape of fianl_output:{final_output.shape}")
+def RDloss(ffl_output,final_output):
+    loss = tf.keras.losses.MeanSquaredError()
+    return loss(ffl_output,final_output)
+model.compile(optimizer='adam',loss='RDloss')
 
 
 # Train and test
-Train = model.fit(U_train, Y_train, epochs=50)
+Train = model.fit(,epochs=50)
+
+
+'''
 Y_predict = model.predict(U_test)
 Y_pred = np.squeeze(Y_predict, axis=2)
 Y_pred = Y_pred.flatten()
