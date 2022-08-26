@@ -55,6 +55,7 @@ for i in range(1800):
        x_20[i + 1] = 0.9*x_1[i] + 2*u[i]
 print(f"Shape of x_15:{x_15.shape}")
 
+'''
 # Visualize the dataset
 h = np.arange(0,1801)
 def u_plot (x_axis,y_axis,x_label,y_label):
@@ -64,23 +65,16 @@ def u_plot (x_axis,y_axis,x_label,y_label):
     plt.ylabel(y_label, {'fontsize': 12})
 u_plot (h,x_1,'h','x_1')
 plt.show()
+'''
 
-arrays_list = [x_3,x_4,x_5,x_6,x_7,x_8,x_9,x_10,
+arrays_list = [x_1,x_2,x_3,x_4,x_5,x_6,x_7,x_8,x_9,x_10,
                x_11,x_12,x_13,x_14,x_15,x_16,x_17,x_18,x_19,x_20]
 
-x_1 = x_1.reshape(1801,1)
-x_2 = x_2.reshape(1801,1)
-
-combined_x = np.concatenate((x_1,x_2),axis=1)
-
-for _ in arrays_list:
-    _=_.reshape(1801,1)
-    combined_x = np.concatenate((combined_x, _),axis=1)
-print(f"Shape of combined_x: {combined_x.shape}")
-
-
-
 '''
+print(f"Shape of combined_x: {combined_x.shape}")
+'''
+
+
 # Create the time series sequences
 def time_series_sequence(input_dataset, output_dataset, input_length, output_length): 
     U, y = list(), list()
@@ -96,36 +90,70 @@ def time_series_sequence(input_dataset, output_dataset, input_length, output_len
 
 
 # Split the dataset into train and test
-y = x.reshape(1801,1)
+
+
 u = u.reshape(1800,1)
 train_ind = 1000
-y_train = y[1:train_ind+1]
-y_test = y[train_ind+1:]
+y_train_list = []
+y_test_list = []
+for arrays in arrays_list:
+    y_train = arrays[1:train_ind+1]
+    y_test = arrays[train_ind+1:]
+    y_train_list.append(y_train)
+    y_test_list.append(y_test)
+print(len(y_train_list))
+
 u_train = u[:train_ind]
 u_test = u[train_ind:]
-print(f"Shape of y_train:{y_train.shape}")
-print(f"shape of y_test:{y_test.shape}")
-print(f"Shape of u_train:{u_train.shape}")
-print(f"shape of u_test:{u_test.shape}")
-
 
 # Create the 3D train, test dataset to feed into LSTM layer.
 input_length = 20 
 output_length = 5
-U_train, Y_train = time_series_sequence(u_train, y_train, input_length, output_length)
-U_test, Y_test = time_series_sequence(u_test, y_test, input_length, output_length)
+Y_train_list = []
+Y_test_list = []
+for arrays in y_train_list:
+    U_train, Y_train = time_series_sequence(u_train, arrays, input_length, output_length)
+    Y_train_list.append(Y_train)
+for arrays in y_test_list:
+    U_test, Y_test = time_series_sequence(u_test, arrays, input_length, output_length)
+    Y_test_list.append(Y_test)
+
 print(f"Shape of U_train:{U_train.shape}")
 print(f"shape of U_test:{U_test.shape}")
-print(f"Shape of Y_train:{Y_train.shape}")
-print(f"shape of Y_test:{Y_test.shape}")
+Y_train_1 = Y_train_list[0]
+Y_train_2 = Y_train_list[1]
+combined_Y_train = np.dstack((Y_train_1,Y_train_2))
+for i in range(2,20):
+    combined_Y_train = np.dstack((combined_Y_train,Y_train_list[i]))
+print(f"shape of combined_Y_train:{combined_Y_train.shape}")
+Y_test_1 = Y_test_list[0]
+Y_test_2 = Y_test_list[1]
+combined_Y_test = np.dstack((Y_test_1,Y_test_2))
+for i in range(2,20):
+    combined_Y_test = np.dstack((combined_Y_test,Y_test_list[i]))
+print(f"shape of combined_Y_test:{combined_Y_test.shape}")
+# Now, we have U_train, combined_Y_train, U_test, combined_Y_test
+# U_train shape is (976,20,1), combined_Y_train shape is (976,5,20).
+# 20 is features, means we have 20 different(now are same) outputs. 
 
 
-# Build the LSTM encoder-decoder model
+# Build feedforward layer and the LSTM encoder-decoder model
+from keras import Input
 from keras.models import Sequential
 from keras.layers import Dense, LSTM, Dropout, RepeatVector, TimeDistributed
 from keras.callbacks import ModelCheckpoint
-def encoder_decoder_model():
+def feedforward_layer():
     model = Sequential()
+    model.add(Input(20,))
+    model.add(Dense(15,activation='linear'))
+    model.add(Dense(5,activation='linear'))
+    return model
+model_ffl= feedforward_layer()
+model_ffl.summary()
+model_ffl.compile(optimizer='adam', loss='mean_squared_error')
+
+
+'''
     model.add(LSTM(100, activation='sigmoid',input_shape=(20,1)))
     model.add(RepeatVector(5)) #From 2D to 3D.
     model.add(LSTM(100,activation='sigmoid',return_sequences=True))
