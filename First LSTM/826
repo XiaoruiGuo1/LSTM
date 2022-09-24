@@ -73,17 +73,22 @@ arrays_list = [x_1,x_2,x_3,x_4,x_5,x_6,x_7,x_8,x_9,x_10,
 
 
 # Create the time series sequences
-def time_series_sequence(input_dataset, output_dataset, input_length, output_length): 
-    U, y = list(), list()
+def time_series_sequence(input_dataset, output_dataset,input_length, output_length): 
+    enc_U, enc_Y, dec_U, dec_Y = list(), list(), list(), list()
     for i in range(len(output_dataset)):
-        end_iu = i + input_length
-        end_oy = end_iu + output_length
-        if end_oy > len(output_dataset):
+        enc_u = i + input_length
+        enc_y = enc_u
+        dec_u = enc_u + output_length - 1
+        dec_y = enc_u + output_length
+        if dec_y > len(output_dataset):
             break
-        seq_U, seq_y = input_dataset[i:end_iu].tolist(), output_dataset[end_iu:end_oy].tolist()
-        U.append(seq_U)
-        y.append(seq_y)
-    return np.array(U), np.array(y)
+        seq_enc_U, seq_enc_Y = input_dataset[i:enc_u].tolist(), output_dataset[i:enc_y].tolist()
+        seq_dec_U, seq_dec_Y = input_dataset[enc_u-1:dec_u].tolist(),output_dataset[enc_y:dec_y]
+        enc_U.append(seq_enc_U)
+        enc_Y.append(seq_enc_Y)
+        dec_U.append(seq_dec_U)
+        dec_Y.append(seq_dec_Y)
+    return np.array(enc_U), np.array(enc_Y), np.array(dec_U),np.array(dec_Y)
 
 
 # Split the dataset into train and test
@@ -101,21 +106,31 @@ u_train = u[:train_ind]
 u_test = u[train_ind:]
 
 # Create the 3D train, test dataset to feed into LSTM layer.
-input_length = 20 
-output_length = 5
-Y_train_list = []
-Y_test_list = []
+input_length = 3 
+output_length = 4
+enc_Y_train_list = []
+dec_Y_train_list = []
+enc_Y_test_list = []
+dec_Y_test_list = []
 for arrays in y_train_list:
-    U_train, Y_train = time_series_sequence(u_train, arrays, input_length, output_length)
-    Y_train_list.append(Y_train)
+    enc_U_train, enc_Y_train,dec_U_train,dec_Y_train = time_series_sequence(u_train, arrays, input_length, output_length)
+    enc_Y_train_list.append(enc_Y_train)
+    dec_Y_test_list.append(dec_Y_train)
 for arrays in y_test_list:
-    U_test, Y_test = time_series_sequence(u_test, arrays, input_length, output_length)
-    Y_test_list.append(Y_test)
+    enc_U_test, enc_Y_test, dec_U_test,dec_Y_test = time_series_sequence(u_test, arrays, input_length, output_length)
+    enc_Y_test_list.append(enc_Y_test)
+    dec_Y_test_list.append(dec_Y_test)
 
-print(f"Shape of U_train:{U_train.shape}")
-Y_train_1 = Y_train_list[0]
-Y_train_2 = Y_train_list[1]
-combined_Y_train = np.dstack((Y_train_1,Y_train_2))
+print(f"Shape of enc_U_train:{enc_U_train.shape}")
+print(f"Shape of dec_U_test:{dec_U_test.shape}")
+print(f"Shape of enc_Y_train_list[0]:{enc_Y_train_list[0].shape}")
+print(f"Shape of dec_Y_test_list[0]:{dec_Y_test_list[0].shape}")
+#If the system just has one output
+enc_Y_train_1 = enc_Y_train_list[0]
+z = np.dstack((enc_U_train,enc_Y_train_1))
+print(f"Shape of z:{z.shape}")
+
+'''
 for i in range(2,20):
     combined_Y_train = np.dstack((combined_Y_train,Y_train_list[i]))
 print(f"shape of combined_Y_train:{combined_Y_train.shape}")
@@ -125,17 +140,18 @@ combined_Y_test = np.dstack((Y_test_1,Y_test_2))
 for i in range(2,20):
     combined_Y_test = np.dstack((combined_Y_test,Y_test_list[i]))
 print(f"Shape of combined_Y_test:{combined_Y_test.shape}")
-# Now, we have U_train, combined_Y_train, U_test, combined_Y_test
-# U_train shape is (976,20,1), combined_Y_train shape is (976,5,20).
-# 20 is features, means we have 20 different(now are same) outputs. 
+'''
+# Put z into encoder below, get the hidden state
+# and cell state. Then put dec_U_train into the
+# decoder to predict.
 
-
-# Build feedforward layer and the LSTM encoder-decoder model
 from keras import Input,losses
 from keras.losses import Loss
 from keras.models import Sequential
-from keras.layers import Dense, LSTM, Dropout, RepeatVector, TimeDistributed
+from keras.layers import Dense, LSTM, Dropout, RepeatVector, TimeDistributed,Layer
 from keras.callbacks import ModelCheckpoint
+
+'''
 def Reduce_Dimensions_model():
     model = Sequential()
     #feedforward layer
@@ -144,17 +160,53 @@ def Reduce_Dimensions_model():
     model.add(Dense(5,activation='linear'))
     model.add(Dense(1,activation='linear',name="ffloutput"))#from 20D to 1D
     #LSTM encoder_decoder    
+    #encoder
     model.add(LSTM(100, activation='sigmoid'))
     model.add(RepeatVector(5))
+    #decoder
     model.add(LSTM(100,activation='sigmoid',return_sequences=True))
     model.add(TimeDistributed(Dense(units=1,activation = "linear"),name="finaloutput"))
     return model
 model = Reduce_Dimensions_model()
 model.summary()
-ffl_output = model.get_layer("ffloutput").output
-final_output = model.get_layer("finaloutput").output
-print(f"Shape of ffl_output:{ffl_output.shape}")
-print(f"shape of fianl_output:{final_output.shape}")
+'''
+
+#Encoder-Decoder
+class Encoder(Layer):
+    def __init__(self,size,hiddens_num):
+        super(Encoder, self).__init__()
+        self.size = size
+        self.input = Input(size)
+        self.lstm = LSTM(hiddens_num,return_sequence=True,return_state=True)
+
+    def call(self,z):
+        output = self.lstm(z,initial_state=None)
+        states = output[1:]
+        return output[0], states
+    
+class Decoder(Layer):
+    def __init__(self,u_size,hiddens_num,Pred_num):
+        super(Decoder, self).__init__()
+        self.u_size = u_size
+        self.input = Input(u_size)
+        self.lstm = LSTM(hiddens_num,return_sequences=True,return_state=True)
+        self.Dense = Dense(Pred_num)
+    
+    def init_state(self,states):
+        return states
+
+    def call(self,u,states):
+        y = self.Dense(u,states)
+        return y
+
+size = z.shape
+u_size = u.shape
+encoder = Encoder(size,10)
+enc_output, states = encoder(z)
+decoder = Decoder(u_size,20,4)
+state = decoder.init_state(states)
+dec_output = decoder(dec_U_train,state)
+
 def RDloss(ffl_output,final_output):
     loss = tf.keras.losses.MeanSquaredError()
     # We want to compute the loss between ffl_output and final_output
@@ -164,7 +216,6 @@ model.compile(optimizer='adam',loss='RDloss')
 # Train and test
 Train = model.fit(,epochs=50)
 
-'''
 Y_predict = model.predict(U_test)
 Y_pred = np.squeeze(Y_predict, axis=2)
 Y_pred = Y_pred.flatten()

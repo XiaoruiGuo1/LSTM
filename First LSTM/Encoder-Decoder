@@ -1,0 +1,30 @@
+from re import T
+import tensorflow as tf
+import keras
+from keras.layers import LSTM, Layer,Input,Dense
+
+class Encoder(Layer):
+    def __init__(self,z_size,hiddens_num):
+        super(Encoder, self).__init__()
+        self.z_size = z_size
+        self.input = Input(z_size)
+        self.lstm = LSTM(hiddens_num,return_sequence=True,return_state=True)
+
+    def call(self,z):
+        enc_output, h_state, c_state = self.lstm(z,initial_state=None)
+        return enc_output, h_state, c_state
+    
+class Decoder(Layer):
+    def __init__(self,u_size,hiddens_num,Pred_num):
+        super(Decoder, self).__init__()
+        self.u_size = u_size
+        self.input = Input(u_size)
+        self.lstm = LSTM(hiddens_num,return_sequences=True,return_state=True)
+        self.Dense = Dense(Pred_num)
+    
+    def init_state(self,states):
+        return states[1:]
+
+    def call(self,u,states):
+        y = self.Dense(u,states)
+        return y
