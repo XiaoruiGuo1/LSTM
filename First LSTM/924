@@ -4,9 +4,13 @@ import math
 from unicodedata import name
 import numpy as np
 import tensorflow as tf
-from tensorflow import keras
 from matplotlib import pyplot as plt
-
+from keras import Input,losses
+from keras.losses import Loss,MeanSquaredError
+from keras.models import Model
+from keras.layers import Dense, LSTM, Dropout, RepeatVector, TimeDistributed,Layer
+from keras.callbacks import ModelCheckpoint
+from keras.optimizers import Adam
 
 # Create the dataset of subsystems
 u = np.zeros(1800)
@@ -146,12 +150,7 @@ print(f"Shape of combined_Y_test:{combined_Y_test.shape}")
 # and cell state. Then put dec_U_train into the
 # decoder to predict.
 
-from keras import Input,losses
-from keras.losses import Loss,MeanSquaredError
-from keras.models import Sequential
-from keras.layers import Dense, LSTM, Dropout, RepeatVector, TimeDistributed,Layer
-from keras.callbacks import ModelCheckpoint
-from keras.optimizers import Adam
+
 '''
 def Reduce_Dimensions_model():
     model = Sequential()
@@ -176,16 +175,18 @@ model.summary()
 class Encoder(Layer):
     def __init__(self,hiddens_num):
         super(Encoder, self).__init__()
-        self.lstm = LSTM(hiddens_num,return_sequence=True,return_state=True)
+        self.hiddens_num = hiddens_num
+        self.lstm = LSTM(hiddens_num,return_sequences=True,return_state=True)
 
     def call(self,z):
         output = self.lstm(z,initial_state=None)
         states = output[1:]
         return output[0], states
-    
+
 class Decoder(Layer):
     def __init__(self,hiddens_num,Pred_num):
         super(Decoder, self).__init__()
+        self.hiddens_num = hiddens_num
         self.lstm = LSTM(hiddens_num,return_sequences=True,return_state=True)
         self.Dense = Dense(Pred_num)
     
@@ -193,17 +194,18 @@ class Decoder(Layer):
         return states[1]
 
     def call(self,u,states):
-        y = self.Dense(u,states)
+        output = self.lstm(u,states)
+        y = self.Dense(output[0])
         return y
 
-class EncoderDecoder(tf.keras.Model):
+class EncoderDecoder(Model):
     def __init__(self,encoder,decoder):
         super(EncoderDecoder,self).__init__()
         self.encoder = encoder
         self.decoder = decoder
 
-    def call(self,z,dec_U):
-        enc_outputs = self.encoder(z)
+    def call(self,Z,dec_U):
+        enc_outputs = self.encoder(Z)
         dec_state = self.decoder.init_state(enc_outputs)
         return self.decoder(dec_U,dec_state)
 
@@ -214,13 +216,13 @@ def RDloss(dec_Y,dec_output):
 
 
 encoder = Encoder(10)
-decoder = Decoder(20,4)
+decoder = Decoder(10,4)
 encoderdecoder = EncoderDecoder(encoder,decoder)
-model = encoderdecoder(z,dec_U_train)
-model.compile(optimizer="Adam",loss=RDloss)
+train = encoderdecoder(z,dec_U_train)
 
-# Train and test
 '''
+# Train and test
+
 Train = model.fit(z,dec_Y_train_1)
 
 Y_predict = model.predict(U_test)
