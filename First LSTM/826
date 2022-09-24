@@ -115,7 +115,7 @@ dec_Y_test_list = []
 for arrays in y_train_list:
     enc_U_train, enc_Y_train,dec_U_train,dec_Y_train = time_series_sequence(u_train, arrays, input_length, output_length)
     enc_Y_train_list.append(enc_Y_train)
-    dec_Y_test_list.append(dec_Y_train)
+    dec_Y_train_list.append(dec_Y_train)
 for arrays in y_test_list:
     enc_U_test, enc_Y_test, dec_U_test,dec_Y_test = time_series_sequence(u_test, arrays, input_length, output_length)
     enc_Y_test_list.append(enc_Y_test)
@@ -127,6 +127,7 @@ print(f"Shape of enc_Y_train_list[0]:{enc_Y_train_list[0].shape}")
 print(f"Shape of dec_Y_test_list[0]:{dec_Y_test_list[0].shape}")
 #If the system just has one output
 enc_Y_train_1 = enc_Y_train_list[0]
+dec_Y_train_1 = dec_Y_train_list[0]
 z = np.dstack((enc_U_train,enc_Y_train_1))
 print(f"Shape of z:{z.shape}")
 
@@ -146,11 +147,11 @@ print(f"Shape of combined_Y_test:{combined_Y_test.shape}")
 # decoder to predict.
 
 from keras import Input,losses
-from keras.losses import Loss
+from keras.losses import Loss,MeanSquaredError
 from keras.models import Sequential
 from keras.layers import Dense, LSTM, Dropout, RepeatVector, TimeDistributed,Layer
 from keras.callbacks import ModelCheckpoint
-
+from keras.optimizers import Adam
 '''
 def Reduce_Dimensions_model():
     model = Sequential()
@@ -173,10 +174,8 @@ model.summary()
 
 #Encoder-Decoder
 class Encoder(Layer):
-    def __init__(self,size,hiddens_num):
+    def __init__(self,hiddens_num):
         super(Encoder, self).__init__()
-        self.size = size
-        self.input = Input(size)
         self.lstm = LSTM(hiddens_num,return_sequence=True,return_state=True)
 
     def call(self,z):
@@ -185,36 +184,44 @@ class Encoder(Layer):
         return output[0], states
     
 class Decoder(Layer):
-    def __init__(self,u_size,hiddens_num,Pred_num):
+    def __init__(self,hiddens_num,Pred_num):
         super(Decoder, self).__init__()
-        self.u_size = u_size
-        self.input = Input(u_size)
         self.lstm = LSTM(hiddens_num,return_sequences=True,return_state=True)
         self.Dense = Dense(Pred_num)
     
     def init_state(self,states):
-        return states
+        return states[1]
 
     def call(self,u,states):
         y = self.Dense(u,states)
         return y
 
-size = z.shape
-u_size = u.shape
-encoder = Encoder(size,10)
-enc_output, states = encoder(z)
-decoder = Decoder(u_size,20,4)
-state = decoder.init_state(states)
-dec_output = decoder(dec_U_train,state)
+class EncoderDecoder(tf.keras.Model):
+    def __init__(self,encoder,decoder):
+        super(EncoderDecoder,self).__init__()
+        self.encoder = encoder
+        self.decoder = decoder
 
-def RDloss(ffl_output,final_output):
-    loss = tf.keras.losses.MeanSquaredError()
-    # We want to compute the loss between ffl_output and final_output
-    return loss(ffl_output,final_output)
-model.compile(optimizer='adam',loss='RDloss')
+    def call(self,z,dec_U):
+        enc_outputs = self.encoder(z)
+        dec_state = self.decoder.init_state(enc_outputs)
+        return self.decoder(dec_U,dec_state)
+
+
+def RDloss(dec_Y,dec_output):
+    loss = MeanSquaredError()
+    return loss(dec_Y,dec_output)
+
+
+encoder = Encoder(10)
+decoder = Decoder(20,4)
+encoderdecoder = EncoderDecoder(encoder,decoder)
+model = encoderdecoder(z,dec_U_train)
+model.compile(optimizer="Adam",loss=RDloss)
 
 # Train and test
-Train = model.fit(,epochs=50)
+'''
+Train = model.fit(z,dec_Y_train_1)
 
 Y_predict = model.predict(U_test)
 Y_pred = np.squeeze(Y_predict, axis=2)
