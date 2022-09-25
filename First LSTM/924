@@ -204,21 +204,29 @@ class EncoderDecoder(Model):
         self.encoder = encoder
         self.decoder = decoder
 
-    def call(self,Z,dec_U):
+    def call(self,input):
+        Z, dec_U = input
         enc_outputs = self.encoder(Z)
         dec_state = self.decoder.init_state(enc_outputs)
         return self.decoder(dec_U,dec_state)
 
-
+'''
 def RDloss(dec_Y,dec_output):
     loss = MeanSquaredError()
     return loss(dec_Y,dec_output)
-
+'''
 
 encoder = Encoder(10)
-decoder = Decoder(10,4)
+decoder = Decoder(10,1)
 encoderdecoder = EncoderDecoder(encoder,decoder)
-train = encoderdecoder(z,dec_U_train)
+encoderdecoder.compile(
+          loss = losses.MeanSquaredError(),
+          optimizer = Adam()
+)
+input = (z,dec_U_train)
+encoderdecoder.fit(input,dec_Y_train_1,batch_size=10, epochs=50)
+
+
 
 '''
 # Train and test
