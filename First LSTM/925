@@ -76,7 +76,7 @@ arrays_list = [x_1,x_2,x_3,x_4,x_5,x_6,x_7,x_8,x_9,x_10,
                x_11,x_12,x_13,x_14,x_15,x_16,x_17,x_18,x_19,x_20]
 
 
-# Create the time series sequences
+# Create the time series sequences for encoder and decoder
 def time_series_sequence(input_dataset, output_dataset,input_length, output_length): 
     enc_U, enc_Y, dec_U, dec_Y = list(), list(), list(), list()
     for i in range(len(output_dataset)):
@@ -129,27 +129,18 @@ print(f"Shape of enc_U_train:{enc_U_train.shape}")
 print(f"Shape of dec_U_test:{dec_U_test.shape}")
 print(f"Shape of enc_Y_train_list[0]:{enc_Y_train_list[0].shape}")
 print(f"Shape of dec_Y_test_list[0]:{dec_Y_test_list[0].shape}")
+
 #If the system just has one output
 enc_Y_train_1 = enc_Y_train_list[0]
 dec_Y_train_1 = dec_Y_train_list[0]
+enc_Y_test_1 = enc_Y_test_list[0]
+dec_Y_test_1 = dec_Y_test_list[0]
 z = np.dstack((enc_U_train,enc_Y_train_1))
+z_test = np.dstack((enc_U_test,enc_Y_test_1))
 print(f"Shape of z:{z.shape}")
 
-'''
-for i in range(2,20):
-    combined_Y_train = np.dstack((combined_Y_train,Y_train_list[i]))
-print(f"shape of combined_Y_train:{combined_Y_train.shape}")
-Y_test_1 = Y_test_list[0]
-Y_test_2 = Y_test_list[1]
-combined_Y_test = np.dstack((Y_test_1,Y_test_2))
-for i in range(2,20):
-    combined_Y_test = np.dstack((combined_Y_test,Y_test_list[i]))
-print(f"Shape of combined_Y_test:{combined_Y_test.shape}")
-'''
-# Put z into encoder below, get the hidden state
-# and cell state. Then put dec_U_train into the
-# decoder to predict.
-
+# Put z into encoder below, get the hidden state and cell state. 
+# Then put dec_U_train into the decoder to predict.
 
 '''
 def Reduce_Dimensions_model():
@@ -171,7 +162,7 @@ model = Reduce_Dimensions_model()
 model.summary()
 '''
 
-#Encoder-Decoder
+#Customized Encoder-Decoder classes
 class Encoder(Layer):
     def __init__(self,hiddens_num):
         super(Encoder, self).__init__()
@@ -224,26 +215,20 @@ encoderdecoder.compile(
           optimizer = Adam()
 )
 input = (z,dec_U_train)
-encoderdecoder.fit(input,dec_Y_train_1,batch_size=10, epochs=50)
-
-
-
-'''
-# Train and test
-
-Train = model.fit(z,dec_Y_train_1)
-
-Y_predict = model.predict(U_test)
-Y_pred = np.squeeze(Y_predict, axis=2)
-Y_pred = Y_pred.flatten()
-Y_test = np.squeeze(Y_test,axis=2)
-Y_test = Y_test.flatten()
-
+encoderdecoder.fit(input,dec_Y_train_1,batch_size=10, epochs=10)
+test_input = (z_test,dec_U_test)
+Y_pred = encoderdecoder.predict(test_input)
+print(f"Shape of Y_pred:{Y_pred.shape}")
+dec_Y_test_1 = dec_Y_test_1.reshape(794,4,1)
+print(f"Shape of dec_Y_test_1:{dec_Y_test_1.shape}")
 
 # Visualize the results
+Y_pred = np.squeeze(Y_pred, axis=2)
+Y_pred = Y_pred.flatten()
+Y_test = np.squeeze(dec_Y_test_1,axis=2)
+Y_test = Y_test.flatten()
 fig, ax = plt.subplots(1, 1, figsize=(15, 8))
 ax.plot(Y_test, lw=3, c='y', label='test data')
 ax.plot(Y_pred, lw=4, c='r',linestyle = ':', label='predictions')
 ax.legend(loc="lower left")
 plt.show();
-'''
